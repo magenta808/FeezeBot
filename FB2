@@ -1,0 +1,246 @@
+import asyncio
+import io
+import os
+import random
+import time
+import discord
+import json
+from discord import app_commands, Embed
+from discord.ui import View, Button
+from datetime import timedelta
+
+intents = discord.Intents.default()
+intents.message_content = True
+client = discord.Client(intents=intents)
+tree = app_commands.CommandTree(client)
+
+Activities = (discord.Game("Galaxy On Fire 4: Unleashed"), discord.Game("Galaxy On Fire 2"), discord.Game("Galaxy On Fire 3"))
+FLEntries = os.listdir(path = "/FreezeBot/FreezeLibrary")
+SD = dict(CurrentAvatar = json.load(open("/FreezeBot/savedata.json", "r")))
+
+class Function:
+    def __init__(self, Enabled, delay, mlimit, climit, channel, feezeres): #delay in hours, mlimit in messages, climit in characters
+        self.Enabled = Enabled
+        self.delay = delay
+        self.mlimit = mlimit
+        self.climit = climit
+        self.channel = channel
+        self.feezeres = feezeres
+    def enable(self):
+        self.Enabled = True
+    def disable(self):
+        self.Enabled = False
+    def changedelay(self, dir):
+        if dir == True:
+            self.delay+=1
+        else:
+            if self.delay == 0:
+                return
+            else:
+                self.delay-=1
+    def changemlimit(self, dir):
+        if dir == True:
+            self.mlimit+=1
+        else:
+            if self.mlimit == 0:
+                return
+            else:
+                self.mlimit-=1
+
+#test server id: hi
+#KC server id: hi
+
+Autopost = Function(False,1,1,1,hi,True)
+
+async def calc_timediff(channel: discord.TextChannel): #RETURN TIME DIFFERENCE IN SECONDS AS INTEGER
+    asdf = discord.Message
+    async for x in channel.history(limit=1):
+        asdf = x
+    timediff = (discord.utils.utcnow() - x.created_at) - timedelta(seconds = 180)
+    #print(f'calc_timediff = {timediff}')
+    return timediff.seconds
+
+async def changeavatar():
+    fn = random.choice(os.listdir("/FreezeBot/Avatars"))
+    if not fn == SD["CurrentAvatar"]:
+        SD["CurrentAvatar"] = fn
+        fp = open(f"/FreezeBot/Avatars/{fn}", "rb")
+        pfp = fp.read()
+        await client.user.edit(username="FeezeBot", avatar = pfp)
+    else:
+        await changeavatar()
+
+async def randfreeze(): #RETURNS RANDOM FREEZE AS DISCORD FILE
+    fn = random.choice(os.listdir("/FreezeBot/FreezeLibrary"))
+    with open(f"/FreezeBot/FreezeLibrary/{fn}", "rb") as image:
+        with io.BytesIO(image.read()) as imageBytes:
+            imageBytes.seek(0)
+            randFreeze = discord.File(imageBytes, filename = "freeze.png")
+            return randFreeze
+
+async def autopostcheck(): #AUTOPOSTING. SET TO hours
+    if Autopost.Enabled == True:
+        channel = client.get_channel(Autopost.channel)
+        messages = 0
+        chars = 0
+        lm = discord.Message
+        async for message in channel.history(limit = Autopost.mlimit + 1):
+            if not message.attachments and (message.author != client.user):
+                messages += 1
+                chars += len(message.clean_content)
+            else:
+                break
+        async for message in channel.history(limit=1):
+            lm = message
+        if (await calc_timediff(channel) > (Autopost.delay * 3600)) and (lm.author != client.user) and not lm.attachments and messages > Autopost.mlimit:
+            if Autopost.feezeres == True:
+                await channel.send(file = await randfreeze())
+            else:
+                await channel.send(f"shoot the freeze, not the breeze")
+
+@client.event
+async def on_ready():
+    print(f"Feeze Bot Initialized")
+    print(f"{len(FLEntries)} freezes in circulation")
+    await client.change_presence(activity = Activities[(random.randint(1, len(Activities))) - 1])
+    await tree.sync()
+
+@tree.command(name='freeze',description=f"Request a random freeze from one of my {len(FLEntries)} freezes!")
+async def freeze(i: discord.Interaction):
+    randFreeze = await randfreeze()
+    await i.response.send_message(file = randFreeze)
+
+async def FBMainMenu(m: discord.Message):
+    v = View(timeout=None)
+    buttonClose = Button(style=discord.ButtonStyle.red,label="Close Menu",row=4); buttonKill = Button(style=discord.ButtonStyle.red,label="Shutdown",row=4); buttonSettings = Button(style=discord.ButtonStyle.green,label="Autopost Settings",row=1); buttonAvatar = Button(style=discord.ButtonStyle.blurple,label="Change Avatar",row=0)
+    v.add_item(buttonKill); v.add_item(buttonSettings); v.add_item(buttonAvatar); v.add_item(buttonClose)
+
+    e = Embed(description=f"**= *FeezeBot* Admin Menu**\nFreezes: {len(FLEntries)}")
+    
+    await m.edit(content="",embed=e,view=v)
+
+    async def bK(interaction):
+        await m.delete()
+        await interaction.response.send_message("Shutting down...",ephemeral=True)
+        sd = open("/home/jeremy/FreezeBot/savedata.json", "w")
+        json.dump(SD, sd)
+        sd.close()
+        print(f"shutting down")
+        await client.close()
+    async def bS(interaction):
+        v.clear_items()
+        await m.edit(view=v)
+        await interaction.response.defer()
+        await FBSettingsMenu(m)
+    async def bA(interaction):
+        await changeavatar()
+        await interaction.response.send_message("Done :thumbsup:", ephemeral = True)
+    async def bC(interaction):
+        await m.delete()
+        await interaction.response.defer()
+    buttonKill.callback = bK
+    buttonAvatar.callback = bA
+    buttonSettings.callback = bS
+    buttonClose.callback = bC
+
+async def FBSettingsMenu(m: discord.Message):
+    v = View(timeout=None)
+    buttBack = Button(label="Return to Main Menu",row=4,style=discord.ButtonStyle.red)
+    buttAuFRToggle = Button(label="Toggle Autopost Freezes  ",row=0,style=discord.ButtonStyle.blurple)
+    if Autopost.Enabled == False:
+        d = "**= *FeezeBot* Autopost Settings Menu**\nAutopost: Disabled"
+        buttEnableAutopost = Button(label="Enable Autopost                ",row=0, style=discord.ButtonStyle.blurple)
+        v.add_item(buttEnableAutopost)
+        async def bEA(interaction):
+            v.remove_item(buttEnableAutopost)
+            Autopost.Enabled = True
+            await interaction.response.defer()
+            await FBSettingsMenu(m)
+            while Autopost.Enabled == True:
+                await autopostcheck()
+        buttEnableAutopost.callback = bEA
+    else:
+        d = "**= *FeezeBot* Autopost Settings Menu**\nAutopost: Enabled"
+        buttDisableAutopost = Button(label="Disable Autopost               ",row=0, style=discord.ButtonStyle.blurple)
+        v.add_item(buttDisableAutopost)
+        async def bDA(interaction):
+            v.remove_item(buttDisableAutopost)
+            Autopost.Enabled = False
+            await interaction.response.defer()
+            await FBSettingsMenu(m)
+        buttDisableAutopost.callback = bDA
+    buttAuDelayUp = Button(label="Increase Delay                    ",row=1, style=discord.ButtonStyle.gray); buttAuDelayDown = Button(label="Decrease Delay                    ",row=1, style=discord.ButtonStyle.gray); buttAuMlimitUp = Button(label="Increase Message Limit   ",row=2, style=discord.ButtonStyle.gray); buttAuMlimitDown = Button(label="Decrease Message Limit   ",row=2, style=discord.ButtonStyle.gray); buttAuClimitUp = Button(label="Increase Character Limit",row=3, style=discord.ButtonStyle.gray); buttAuClimitDown = Button(label="Decrease Character Limit",row=3, style=discord.ButtonStyle.gray)
+    listbutts = [buttBack, buttAuDelayUp, buttAuDelayDown, buttAuMlimitUp, buttAuMlimitDown, buttAuFRToggle]
+    for x in listbutts:
+        v.add_item(x)
+    
+    if Autopost.feezeres == True:
+        d += f"\nAutopost Freeze: True"
+    else:
+        d += f"\nAutopost Freeze: False"
+
+    d += "\n"
+    if Autopost.delay != 1:
+        d += f"\nDelay: {Autopost.delay} hours"
+    else:
+        d += f"\nDelay: {Autopost.delay} hour"
+    d += f"\nMessage Limit: {Autopost.mlimit}\nCharacter Limit: Disabled"
+    d += "\n"
+    d += f"\nChannel: {client.get_channel(Autopost.channel).jump_url}"
+    e = Embed(description=d)
+
+    await m.edit(embed=e,view=v)
+
+    async def bB(interaction):
+        v.clear_items()
+        await m.edit(view=v)
+        await interaction.response.defer()
+        await FBMainMenu(m)
+    async def bADU(interaction):
+        await interaction.response.defer()
+        Autopost.changedelay(True)
+        await FBSettingsMenu(m)
+    async def bADD(interaction):
+        await autopostcheck()
+        await interaction.response.defer()
+        Autopost.changedelay(False)
+        await FBSettingsMenu(m)
+    async def bAMU(interaction):
+        await interaction.response.defer()
+        Autopost.changemlimit(True)
+        await FBSettingsMenu(m)
+    async def bAMD(interaction):
+        await autopostcheck()
+        await interaction.response.defer()
+        Autopost.changemlimit(False)
+        await FBSettingsMenu(m)
+    async def bAFRT(interaction):
+        if Autopost.feezeres == True:
+            Autopost.feezeres = False
+        else:
+            Autopost.feezeres = True
+        await interaction.response.defer()
+        await FBSettingsMenu(m)
+    buttBack.callback = bB
+    buttAuDelayUp.callback = bADU
+    buttAuDelayDown.callback = bADD
+    buttAuMlimitUp.callback = bAMU
+    buttAuMlimitDown.callback = bAMD
+    buttAuFRToggle.callback = bAFRT
+
+@client.event
+async def on_message(m: discord.Message):
+    if m.author.id == hi
+        if m.content == "getchan":
+            await m.reply(f"{m.channel.id}")
+        if m.content == "dance":
+            await m.reply("no")
+        if m.content == "fbadmin":
+            e = Embed(description="*Initializing Menu...*")
+            await m.reply(content="",embed=e)
+            async for message in m.channel.history(limit=1):
+                if message.author == client.user:
+                    m = message
+            await FBMainMenu(m)
+
+client.run()
