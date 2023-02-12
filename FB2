@@ -5,6 +5,7 @@ import random
 import time
 import discord
 import json
+from enum import Enum
 from discord import app_commands, Embed
 from discord.ui import View, Button
 from datetime import timedelta
@@ -15,8 +16,8 @@ client = discord.Client(intents=intents)
 tree = app_commands.CommandTree(client)
 
 Activities = (discord.Game("Galaxy On Fire 4: Unleashed"), discord.Game("Galaxy On Fire 2"), discord.Game("Galaxy On Fire 3"))
-FLEntries = os.listdir(path = "/FreezeBot/FreezeLibrary")
-SD = dict(CurrentAvatar = json.load(open("/FreezeBot/savedata.json", "r")))
+FLEntries = os.listdir(path = "/home//FreezeBot/FreezeLibrary")
+SD = dict(CurrentAvatar = json.load(open("/home//FreezeBot/savedata.json", "r")))
 
 class Function:
     def __init__(self, Enabled, delay, mlimit, climit, channel, feezeres): #delay in hours, mlimit in messages, climit in characters
@@ -47,10 +48,10 @@ class Function:
             else:
                 self.mlimit-=1
 
-#test server id: hi
-#KC server id: hi
+#test server id: 1012842346066485368
+#KC server id: 516054867215908864
 
-Autopost = Function(False,1,1,1,hi,True)
+Autopost = Function(False,1,1,1,516054867215908864,True)
 
 async def calc_timediff(channel: discord.TextChannel): #RETURN TIME DIFFERENCE IN SECONDS AS INTEGER
     asdf = discord.Message
@@ -61,22 +62,64 @@ async def calc_timediff(channel: discord.TextChannel): #RETURN TIME DIFFERENCE I
     return timediff.seconds
 
 async def changeavatar():
-    fn = random.choice(os.listdir("/FreezeBot/Avatars"))
+    fn = random.choice(os.listdir("/home//FreezeBot/Avatars"))
     if not fn == SD["CurrentAvatar"]:
         SD["CurrentAvatar"] = fn
-        fp = open(f"/FreezeBot/Avatars/{fn}", "rb")
+        fp = open(f"/home//FreezeBot/Avatars/{fn}", "rb")
         pfp = fp.read()
         await client.user.edit(username="FeezeBot", avatar = pfp)
     else:
         await changeavatar()
 
-async def randfreeze(): #RETURNS RANDOM FREEZE AS DISCORD FILE
-    fn = random.choice(os.listdir("/FreezeBot/FreezeLibrary"))
-    with open(f"/FreezeBot/FreezeLibrary/{fn}", "rb") as image:
-        with io.BytesIO(image.read()) as imageBytes:
-            imageBytes.seek(0)
-            randFreeze = discord.File(imageBytes, filename = "freeze.png")
-            return randFreeze
+class Libraries(Enum):
+    GoF = 0
+    MR = 1
+    HNG = 2
+
+async def randfreeze(library): #RETURNS RANDOM FREEZE AS DISCORD FILE
+    match library:
+        case "GoF":
+            fn = random.choice(os.listdir("/home//FreezeBot/GoF/GoFAll"))
+            with open(f"/home//FreezeBot/FreezeLibrary/{fn}", "rb") as image:
+                with io.BytesIO(image.read()) as imageBytes:
+                    imageBytes.seek(0)
+                    randFreeze = discord.File(imageBytes, filename = "freeze.png")
+                    return randFreeze
+        case "GoF2":
+            fn = random.choice(os.listdir("/home//FreezeBot/GoF/GoF2"))
+            with open(f"/home//FreezeBot/FreezeLibrary/{fn}", "rb") as image:
+                with io.BytesIO(image.read()) as imageBytes:
+                    imageBytes.seek(0)
+                    randFreeze = discord.File(imageBytes, filename = "freeze.png")
+                    return randFreeze
+        case "GoF3":
+            fn = random.choice(os.listdir("/home//FreezeBot/GoF/GoF3"))
+            with open(f"/home//FreezeBot/FreezeLibrary/{fn}", "rb") as image:
+                with io.BytesIO(image.read()) as imageBytes:
+                    imageBytes.seek(0)
+                    randFreeze = discord.File(imageBytes, filename = "freeze.png")
+                    return randFreeze
+        case "HNG":
+            fn = random.choice(os.listdir("/home//FreezeBot/HNG"))
+            with open(f"/home//FreezeBot/FreezeLibrary/{fn}", "rb") as image:
+                with io.BytesIO(image.read()) as imageBytes:
+                    imageBytes.seek(0)
+                    randFreeze = discord.File(imageBytes, filename = "freeze.png")
+                    return randFreeze
+        case "MR":
+            fn = random.choice(os.listdir("/home//FreezeBot/MR"))
+            with open(f"/home//FreezeBot/FreezeLibrary/{fn}", "rb") as image:
+                with io.BytesIO(image.read()) as imageBytes:
+                    imageBytes.seek(0)
+                    randFreeze = discord.File(imageBytes, filename = "freeze.png")
+                    return randFreeze
+        case _:
+            fn = random.choice(os.listdir("/home//FreezeBot/FreezeLibrary"))
+            with open(f"/home//FreezeBot/FreezeLibrary/{fn}", "rb") as image:
+                with io.BytesIO(image.read()) as imageBytes:
+                    imageBytes.seek(0)
+                    randFreeze = discord.File(imageBytes, filename = "freeze.png")
+                    return randFreeze
 
 async def autopostcheck(): #AUTOPOSTING. SET TO hours
     if Autopost.Enabled == True:
@@ -94,7 +137,7 @@ async def autopostcheck(): #AUTOPOSTING. SET TO hours
             lm = message
         if (await calc_timediff(channel) > (Autopost.delay * 3600)) and (lm.author != client.user) and not lm.attachments and messages > Autopost.mlimit:
             if Autopost.feezeres == True:
-                await channel.send(file = await randfreeze())
+                await channel.send(file = await randfreeze(None))
             else:
                 await channel.send(f"shoot the freeze, not the breeze")
 
@@ -107,7 +150,7 @@ async def on_ready():
 
 @tree.command(name='freeze',description=f"Request a random freeze from one of my {len(FLEntries)} freezes!")
 async def freeze(i: discord.Interaction):
-    randFreeze = await randfreeze()
+    randFreeze = await randfreeze(None)
     await i.response.send_message(file = randFreeze)
 
 async def FBMainMenu(m: discord.Message):
@@ -122,7 +165,7 @@ async def FBMainMenu(m: discord.Message):
     async def bK(interaction):
         await m.delete()
         await interaction.response.send_message("Shutting down...",ephemeral=True)
-        sd = open("/home/jeremy/FreezeBot/savedata.json", "w")
+        sd = open("/home//FreezeBot/savedata.json", "w")
         json.dump(SD, sd)
         sd.close()
         print(f"shutting down")
@@ -230,7 +273,7 @@ async def FBSettingsMenu(m: discord.Message):
 
 @client.event
 async def on_message(m: discord.Message):
-    if m.author.id == hi
+    if m.author.id == 697905630391959572 or 227166069377204225 or 188618589102669826 or 153516814200995840 or 265268745876799488:
         if m.content == "getchan":
             await m.reply(f"{m.channel.id}")
         if m.content == "dance":
@@ -243,4 +286,4 @@ async def on_message(m: discord.Message):
                     m = message
             await FBMainMenu(m)
 
-client.run()
+client.run(TOKEN)
