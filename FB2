@@ -152,7 +152,7 @@ async def on_ready():
     await tree.sync()
 
 @tree.command(name='freeze',description=f"Request a random freeze from one of my {len(FLEntries)} freezes!")
-async def freeze(i: discord.Interaction, game: Optional[Libraries]):
+async def freeze(i: discord.Interaction, game: Optional[Libraries] = None):
     rF = await randfreeze(game)
     await i.response.send_message(file = rF)
 
