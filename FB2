@@ -6,6 +6,7 @@ import time
 import discord
 import json
 from enum import Enum
+from typing import Optional
 from discord import app_commands, Embed
 from discord.ui import View, Button
 from datetime import timedelta
@@ -75,38 +76,40 @@ class Libraries(Enum):
     GoF = 0
     MR = 1
     HNG = 2
+    GoF2 = 3
+    GoF3 = 4
 
-async def randfreeze(library): #RETURNS RANDOM FREEZE AS DISCORD FILE
-    match library:
-        case "GoF":
+async def randfreeze(seleection): #RETURNS RANDOM FREEZE AS DISCORD FILE
+    match seleection:
+        case Libraries.GoF:
             fn = random.choice(os.listdir("/home//FreezeBot/GoF/GoFAll"))
             with open(f"/home//FreezeBot/FreezeLibrary/{fn}", "rb") as image:
                 with io.BytesIO(image.read()) as imageBytes:
                     imageBytes.seek(0)
                     randFreeze = discord.File(imageBytes, filename = "freeze.png")
                     return randFreeze
-        case "GoF2":
+        case Libraries.GoF2:
             fn = random.choice(os.listdir("/home//FreezeBot/GoF/GoF2"))
             with open(f"/home//FreezeBot/FreezeLibrary/{fn}", "rb") as image:
                 with io.BytesIO(image.read()) as imageBytes:
                     imageBytes.seek(0)
                     randFreeze = discord.File(imageBytes, filename = "freeze.png")
                     return randFreeze
-        case "GoF3":
+        case Libraries.GoF3:
             fn = random.choice(os.listdir("/home//FreezeBot/GoF/GoF3"))
             with open(f"/home//FreezeBot/FreezeLibrary/{fn}", "rb") as image:
                 with io.BytesIO(image.read()) as imageBytes:
                     imageBytes.seek(0)
                     randFreeze = discord.File(imageBytes, filename = "freeze.png")
                     return randFreeze
-        case "HNG":
+        case Libraries.HNG:
             fn = random.choice(os.listdir("/home//FreezeBot/HNG"))
             with open(f"/home//FreezeBot/FreezeLibrary/{fn}", "rb") as image:
                 with io.BytesIO(image.read()) as imageBytes:
                     imageBytes.seek(0)
                     randFreeze = discord.File(imageBytes, filename = "freeze.png")
                     return randFreeze
-        case "MR":
+        case Libraries.MR:
             fn = random.choice(os.listdir("/home//FreezeBot/MR"))
             with open(f"/home//FreezeBot/FreezeLibrary/{fn}", "rb") as image:
                 with io.BytesIO(image.read()) as imageBytes:
@@ -149,9 +152,9 @@ async def on_ready():
     await tree.sync()
 
 @tree.command(name='freeze',description=f"Request a random freeze from one of my {len(FLEntries)} freezes!")
-async def freeze(i: discord.Interaction):
-    randFreeze = await randfreeze(None)
-    await i.response.send_message(file = randFreeze)
+async def freeze(i: discord.Interaction, game: Optional[Libraries]):
+    rF = await randfreeze(game)
+    await i.response.send_message(file = rF)
 
 async def FBMainMenu(m: discord.Message):
     v = View(timeout=None)
@@ -286,4 +289,4 @@ async def on_message(m: discord.Message):
                     m = message
             await FBMainMenu(m)
 
-client.run(TOKEN)
+client.run('')
